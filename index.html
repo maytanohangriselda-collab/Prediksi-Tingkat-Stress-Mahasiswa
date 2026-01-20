@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Academic Stress Prediction</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{
+    margin:0;
+    font-family:system-ui,sans-serif;
+    color:#fce7f3;
+    overflow:hidden;
+}
+
+/* BACKGROUND */
+.bg-image{
+    position:fixed;
+    inset:-5%;
+    background:url("Media/foto background.jpg") center/cover no-repeat;
+    animation: zoom 35s ease-in-out infinite;
+    z-index:-3;
+}
+@keyframes zoom{
+    0%{transform:scale(1)}
+    50%{transform:scale(1.1)}
+    100%{transform:scale(1)}
+}
+.bg-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.6);
+    z-index:-2;
+}
+
+/* CARD – NBA STYLE PINK (HALUS, TANPA GARIS) */
+.card{
+    position:relative;
+    background:rgba(15,15,30,.78);
+    border-radius:30px;
+    padding:2.5rem;
+
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+
+    /* glow nyatu ala NBA */
+    box-shadow:
+        0 25px 50px rgba(0,0,0,.55),
+        0 0 35px rgba(236,72,153,.35),
+        0 0 80px rgba(236,72,153,.18);
+}
+
+/* MUSIC BUTTON */
+.music-btn{
+    position:fixed;
+    top:20px;
+    right:20px;
+    background:rgba(255,182,213,.25);
+    border:none;
+    padding:10px 16px;
+    border-radius:999px;
+    color:#ffe4f1;
+    font-weight:600;
+    cursor:pointer;
+    backdrop-filter: blur(8px);
+}
+.music-btn:hover{
+    background:rgba(255,182,213,.35);
+}
+</style>
+</head>
+
+<body class="min-h-screen flex flex-col items-center justify-start pt-10">
+
+<!-- MUSIC -->
+<audio id="bgMusic" loop>
+    <source src="Media/The Gallery in My Heart Yumi Matsutoya.mp3" type="audio/mpeg">
+</audio>
+<button id="musicBtn" class="music-btn">▶ Music</button>
+
+<div class="bg-image"></div>
+<div class="bg-overlay"></div>
+
+<!-- TITLE (TENGAH, 1 BARIS) -->
+<div class="w-full max-w-7xl px-10 mt-6 mb-16 text-center">
+    <h1 class="text-6xl md:text-7xl font-extrabold text-pink-400">
+        Student Academic Stress Prediction
+    </h1>
+    <p class="text-pink-200 tracking-wide mt-4 opacity-90">
+        Web-Based Student Academic Stress Prediction Using Machine Learning
+    </p>
+</div>
+
+<!-- MAIN -->
+<div class="flex gap-36 w-full max-w-7xl px-10 mt-4">
+
+<!-- INPUT -->
+<div class="w-1/2 card">
+<h2 class="text-2xl font-bold text-pink-300 mb-8">
+Input Factors
+</h2>
+
+<form id="predictForm" class="space-y-8">
+
+<div>
+<label class="block mb-2 text-pink-300">
+📚 Academic Pressure (1–5): <span id="apVal">3</span>
+</label>
+<input id="academic_pressure" type="range"
+min="1" max="5" value="3"
+class="w-full accent-pink-400"
+oninput="apVal.innerText=this.value">
+</div>
+
+<div>
+<label class="block mb-2 text-pink-300">
+😴 Sleep Hours (per night)
+</label>
+<select id="sleep_hours"
+class="w-full p-2 rounded-lg bg-slate-800 text-pink-200">
+<option value="1">Less than 5 hours</option>
+<option value="2">5–6 hours</option>
+<option value="3" selected>7–8 hours</option>
+<option value="4">More than 8 hours</option>
+</select>
+</div>
+
+<div>
+<label class="block mb-2 text-pink-300">
+🧠 Main Academic Stress Factor
+</label>
+<select id="stress_cause"
+class="w-full p-2 rounded-lg bg-slate-800 text-pink-200">
+<option>Exams</option>
+<option>Assignments</option>
+<option>Time Management</option>
+<option>Financial Issues</option>
+<option>Family / Personal Issues</option>
+<option>Other</option>
+</select>
+</div>
+
+<button class="w-full py-3 rounded-xl
+bg-gradient-to-r from-pink-400 to-fuchsia-500
+text-xl font-bold hover:scale-105 transition">
+✨ Predict Stress
+</button>
+
+</form>
+</div>
+
+<!-- RESULT -->
+<div class="w-1/2 card text-center">
+<h2 class="text-pink-300 uppercase tracking-widest text-sm mb-4">
+Prediction Result
+</h2>
+
+<div id="result"
+class="text-7xl font-extrabold text-pink-400 my-6">
+–
+</div>
+
+<div id="level" class="text-xl mb-6 text-pink-200">
+Move inputs and click predict
+</div>
+
+<canvas id="chart" height="150"></canvas>
+</div>
+
+</div>
+
+<script>
+let chart;
+
+const stressFactorMap = {
+    "Exams": 4,
+    "Assignments": 3,
+    "Time Management": 3,
+    "Financial Issues": 4,
+    "Family / Personal Issues": 5,
+    "Other": 2
+};
+
+/* MUSIC */
+const music = document.getElementById("bgMusic");
+const musicBtn = document.getElementById("musicBtn");
+music.volume = 0.3;
+
+musicBtn.addEventListener("click", () => {
+    if (music.paused) {
+        music.play();
+        musicBtn.innerText = "⏸ Music";
+    } else {
+        music.pause();
+        musicBtn.innerText = "▶ Music";
+    }
+});
+
+/* PREDICTION */
+predictForm.addEventListener("submit", async e => {
+    e.preventDefault();
+
+    const ap = +academic_pressure.value;
+    const sh = +sleep_hours.value;
+    const sc = stress_cause.value;
+    const scValue = stressFactorMap[sc];
+
+    const res = await fetch("http://localhost:8000/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            academic_pressure: ap,
+            sleep_hours: sh,
+            stress_cause: sc
+        })
+    });
+
+    const r = await res.json();
+    const score = r.stress_score.toFixed(2);
+
+    result.innerText = score;
+
+    level.innerText =
+        score < 2.3 ? "🟢 Low Stress" :
+        score < 3.0 ? "🟡 Moderate Stress" :
+                      "🔴 High Stress";
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(document.getElementById("chart"), {
+        type: "bar",
+        data: {
+            labels: ["Academic Pressure","Sleep Hours","Main Stress Factor"],
+            datasets: [{
+                data: [ap, sh, scValue],
+                backgroundColor: ["#f472b6","#fb7185","#facc15"],
+                borderRadius: 10
+            }]
+        },
+        options: {
+            plugins:{ legend:false },
+            scales:{ y:{ min:0, max:5, ticks:{ stepSize:1 } } }
+        }
+    });
+});
+</script>
+
+</body>
+</html>
