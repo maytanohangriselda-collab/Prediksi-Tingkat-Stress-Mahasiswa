@@ -1,10 +1,11 @@
 # Student Academic Stress Prediction
 
-**Nama** : Mayta Nohan Griselda
+**Nama** : Mayta Nohan Griselda  
 **NIM** : 2441044  
 **Program Studi** : Sistem Informasi  
 **Perguruan Tinggi** : STMIK AMIK Bandung  
-**Mata Kuliah** : Machine Learning
+**Mata Kuliah** : Machine Learning  
+
 
 ---
 
